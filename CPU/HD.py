@@ -1,16 +1,14 @@
 import numpy as np
-import pickle
 import sys
-import os
-import math
 from copy import deepcopy
-from sklearn import preprocessing
-from sklearn.neighbors import KNeighborsClassifier as KNN
 
 
 def binarize(base_matrix):
 	return np.where(base_matrix < 0, -1, 1)
 
+"""
+Random Projection Encoding: This function encodes input data (`X_data`) using random projections (RP) by multiplying the data with a base matrix. If `signed` is True, the resulting hyperdimensional vectors (HV) are binarized using the `binarize` function.
+"""
 def encoding_rp(X_data, base_matrix, signed=False):
 	enc_hvs = []
 	for i in range(len(X_data)):
@@ -23,6 +21,10 @@ def encoding_rp(X_data, base_matrix, signed=False):
 		enc_hvs.append(hv)
 	return enc_hvs
 
+
+"""
+Level-ID Encoding: It encodes input data based on levels (quantization) and IDs, a more complex form of encoding that creates HVs by summing up level-specific HVs multiplied by ID-specific HVs, representing both the magnitude and identity of features.
+"""
 def encoding_idlv(X_data, lvl_hvs, id_hvs, D, bin_len, x_min, L=64):
 	enc_hvs = []
 	for i in range(len(X_data)):
@@ -39,6 +41,9 @@ def encoding_idlv(X_data, lvl_hvs, id_hvs, D, bin_len, x_min, L=64):
 		enc_hvs.append(sum_)
 	return enc_hvs
 
+"""
+Permutation Encoding: Similar to level-ID encoding but uses permutation (rolling) of level HVs based on the feature index, which encodes both the feature's value and its position.
+"""
 def encoding_perm(X_data, lvl_hvs, D, bin_len, x_min, L=64):
 	enc_hvs = []
 	for i in range(len(X_data)):
@@ -53,6 +58,9 @@ def encoding_perm(X_data, lvl_hvs, D, bin_len, x_min, L=64):
 		enc_hvs.append(sum_)
 	return enc_hvs
 
+"""
+Maximum Match Function: This function identifies the class of an encoded HV by computing the score (dot product normalized by class HV norms) with class-specific HVs and returning the class with the highest score.
+"""
 def max_match(class_hvs, enc_hv, class_norms):
 		max_score = -np.inf
 		max_index = -1
@@ -64,10 +72,15 @@ def max_match(class_hvs, enc_hv, class_norms):
 				max_index = i
 		return max_index
 
+"""
+Training Function: It initializes the model by encoding training and validation data using one of the selected encoding schemes (`rp`, `rp-sign`, `idlv`, `perm`). It then trains a classifier by adjusting class-specific HVs based on training data and retraining epochs, evaluating performance on validation data to select the best model configuration. The function supports adjusting the dimensions of HVs (`D`), learning rate (`lr`), and other parameters.
+"""
 def train(X_train, y_train, X_test, y_test, D=500, alg='rp', epoch=20, lr=1.0, L=64):
 	
+	"""
+	Data Preparation: Initially, the training data is shuffled to ensure randomness. A portion of the training data (20%) is separated out as validation data to evaluate the model's performance and avoid overfitting.
+	"""
 	np.random.seed(0)
-	#randomly select 20% of train data as validation
 	permvar = np.arange(0, len(X_train))
 	np.random.shuffle(permvar)
 	X_train = [X_train[i] for i in permvar]
@@ -78,7 +91,15 @@ def train(X_train, y_train, X_test, y_test, D=500, alg='rp', epoch=20, lr=1.0, L
 	X_train = X_train[cnt_vld:]
 	y_train = y_train[cnt_vld:]
 
-	#encodings
+	"""
+	Encoding: The function supports three encoding schemes: random projection (rp, rp-sign), level-ID (idlv), and permutation (perm). Each encoding strategy represents input data as high-dimensional vectors (HDVs) in a unique way:
+
+	Random Projection: Generates a base matrix with binary values to project the input data into a high-dimensional space, optionally applying binarization.
+
+	Level-ID: Quantizes feature values into levels and combines them with identifier vectors to encode both the magnitude and identity of features.
+
+	Permutation: Similar to level-ID but uses a permutation (rolling) of vectors based on the feature index to encode positional information.
+	"""
 	if alg in ['rp', 'rp-sign']:
 		#create base matrix
 		base_matrix = np.random.rand(D, len(X_train[0]))
@@ -126,13 +147,20 @@ def train(X_train, y_train, X_test, y_test, D=500, alg='rp', epoch=20, lr=1.0, L
 			print('\n\nEncoding ' + str(len(X_validation)) + ' validation data')
 			validation_enc_hvs = encoding_perm(X_validation, lvl_hvs, D, bin_len, x_min, L)
 	
-	#training, initial model
+		
+	"""
+	Training Process: The training process involves initializing class HVs, performing an initial training to create class-specific HVs by summing encoded HVs of samples belonging to each class, followed by retraining epochs where the model is fine-tuned by shuffling data and adjusting class HVs based on mispredictions.
+	"""
 	class_hvs = [[0.] * D] * (max(y_train) + 1)
 	for i in range(len(train_enc_hvs)):
 		class_hvs[y_train[i]] += train_enc_hvs[i]
 	class_norms = [np.linalg.norm(hv) for hv in class_hvs]
 	class_hvs_best = deepcopy(class_hvs)
 	class_norms_best = deepcopy(class_norms)
+
+	"""
+	Retraining: Through specified epochs, the model is fine-tuned by adjusting the class-specific HDVs based on the learning rate and prediction accuracy. During retraining, the training data is reshuffled, and the model's performance is evaluated on the validation set. The best-performing model configuration on the validation set is retained for testing.
+	"""	
 	#retraining
 	if epoch > 0:
 		acc_max = -np.inf
@@ -176,6 +204,11 @@ def train(X_train, y_train, X_test, y_test, D=500, alg='rp', epoch=20, lr=1.0, L
 		test_enc_hvs = encoding_idlv(X_test, lvl_hvs, id_hvs, D, bin_len, x_min, L)
 	elif alg == 'perm':
 			test_enc_hvs = encoding_perm(X_test, lvl_hvs, D, bin_len, x_min, L)
+	
+	"""
+	Testing Process: Encodes the test data using the chosen scheme and evaluates the performance of the best class HVs obtained during training, calculating accuracy as the proportion of correctly predicted samples.
+    
+	"""
 	correct = 0
 	for i in range(len(test_enc_hvs)):
 		predict = max_match(class_hvs_best, test_enc_hvs[i], class_norms_best)
