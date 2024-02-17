@@ -1,4 +1,4 @@
-HPVM_INSTALL_DIR ?= /home/arnoor2/hpvm_hdc/hpvm/hpvm/
+HPVM_INSTALL_DIR ?= /home/hosein/worktable/hpvm-release/hpvm
 HPVM_BUILD_DIR := $(HPVM_INSTALL_DIR)/build/
 INCLUDES := -I$(HPVM_INSTALL_DIR)/include -I$(HPVM_INSTALL_DIR)/benchmarks/include -I$(HPVM_INSTALL_DIR)/projects/hpvm-hdc -I$(HPVM_INSTALL_DIR)/projects/hetero-c++/test/include -I./src
 

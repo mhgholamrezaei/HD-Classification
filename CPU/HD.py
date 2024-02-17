@@ -2,8 +2,39 @@ import numpy as np
 import sys
 from copy import deepcopy
 
+DEBUG = 1 
+class MinMaxTracker:
+    def __init__(self):
+        self.min_val = None
+        self.max_val = None
+
+    def update_min_max(self, value):
+        """
+        Updates the minimum and maximum values based on the new value provided.
+
+        Parameters:
+        value: The new value to be added to the series for min/max evaluation.
+        """
+        if self.min_val is None or value < self.min_val:
+            self.min_val = value
+        if self.max_val is None or value > self.max_val:
+            self.max_val = value
+
+    def get_min_max(self):
+        """
+        Returns the minimum and maximum values of the series.
+
+        Returns:
+        tuple: A tuple containing the minimum and maximum values.
+        """
+        return self.min_val, self.max_val
+
+tracker1 = MinMaxTracker()
+tracker2 = MinMaxTracker()
+tracker3 = MinMaxTracker()
 
 def binarize(base_matrix):
+	breakpoint()
 	return np.where(base_matrix < 0, -1, 1)
 
 """
@@ -66,6 +97,14 @@ def max_match(class_hvs, enc_hv, class_norms):
 		max_index = -1
 		for i in range(len(class_hvs)):
 			score = np.matmul(class_hvs[i], enc_hv) / class_norms[i]
+			
+			if DEBUG: 
+				tracker1.update_min_max(min(class_hvs[i]))
+				tracker1.update_min_max(max(class_hvs[i]))
+				tracker2.update_min_max(min(enc_hv))
+				tracker2.update_min_max(max(enc_hv))
+				tracker3.update_min_max(score)
+
 			#score = np.matmul(class_hvs[i], enc_hv)
 			if score > max_score:
 				max_score = score
@@ -215,4 +254,8 @@ def train(X_train, y_train, X_test, y_test, D=500, alg='rp', epoch=20, lr=1.0, L
 		if predict == y_test[i]:
 			correct += 1
 	acc = float(correct)/len(test_enc_hvs)
+
+	print("tracker1:", tracker1.get_min_max())
+	print("tracker2:", tracker2.get_min_max())
+	print("tracker3:", tracker3.get_min_max())
 	return acc

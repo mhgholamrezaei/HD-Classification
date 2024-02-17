@@ -1,0 +1,9 @@
+version: '0.1'
+
+services:
+  ubuntu:
+    build: .
+    container_name: basic_ubuntu_container
+    volumes:
+      - ./data:/usr/src/app  # Mount local 'data' directory to 'workdir' in the container
+    tty: true  # Keep the container running

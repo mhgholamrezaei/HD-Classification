@@ -20,8 +20,8 @@ cd dataset
 7z x isolet_pickle.7z
 ```
 Generate .pickle file:
-```Python
-Python dataConversion.py
+```Bash 
+python dataConversion.py
 ```
 ### Step2: Run The Python Code:
 ```Bash 
@@ -52,4 +52,17 @@ Encoding 1559 test data
 0% 4% 9% 14% 19% 24% 29% 34% 39% 44% 49% 54% 59% 64% 69% 74% 79% 83% 88% 93% 98%
 
 0.9281590763309814
+```
+
+### Hetero-C++ 
+```Bash 
+docker-compose build 
+```
+
+```Bash 
+docker-compose up
+```
+
+```Bash 
+docker exec -it basic_ubuntu_container bash
 ```
